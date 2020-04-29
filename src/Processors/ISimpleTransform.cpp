@@ -31,7 +31,7 @@ ISimpleTransform::Status ISimpleTransform::prepare()
     /// Output if has data.
     if (has_output)
     {
-        output.pushDataRef(output_data);
+        output.pushData(std::move(output_data));
         has_output = false;
 
         if (!no_more_data_needed)
@@ -61,7 +61,7 @@ ISimpleTransform::Status ISimpleTransform::prepare()
         if (!input.hasData())
             return Status::NeedData;
 
-        input.pullData(input_data, set_input_not_needed_after_read);
+        input_data = input.pullData(set_input_not_needed_after_read);
         has_input = true;
 
         if (input_data.exception)
@@ -78,7 +78,7 @@ void ISimpleTransform::work()
     if (input_data.exception)
     {
         /// Skip transform in case of exception.
-        input_data.swap(output_data);
+        input_data = std::move(output_data);
         has_input = false;
         has_output = true;
         return;
