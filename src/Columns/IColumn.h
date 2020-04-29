@@ -264,16 +264,6 @@ public:
     using Selector = PaddedPODArray<ColumnIndex>;
     virtual std::vector<MutablePtr> scatter(ColumnIndex num_columns, const Selector & selector) const = 0;
 
-    virtual void scatter(ColumnIndex num_columns, const Selector & selector, std::vector<Ptr> & res_columns) const
-    {
-        auto columns = scatter(num_columns, selector);
-        res_columns.clear();
-        res_columns.reserve(columns.size());
-
-        for (auto & column : columns)
-            res_columns.push_back(std::move(column));
-    }
-
     /// Insert data from several other columns according to source mask (used in vertical merge).
     /// For now it is a helper to de-virtualize calls to insert*() functions inside gather loop
     /// (descendants should call gatherer_stream.gather(*this) to implement this function.)
@@ -396,11 +386,8 @@ protected:
 
     /// Template is to devirtualize calls to insertFrom method.
     /// In derived classes (that use final keyword), implement scatter method as call to scatterImpl.
-
     template <typename Derived>
     std::vector<MutablePtr> scatterImpl(ColumnIndex num_columns, const Selector & selector) const;
-    template <typename Derived>
-    void scatterImplInplace(ColumnIndex num_columns, const Selector & selector, std::vector<Ptr> & res_columns) const;
 };
 
 using ColumnPtr = IColumn::Ptr;

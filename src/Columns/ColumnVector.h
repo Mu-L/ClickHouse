@@ -199,11 +199,6 @@ public:
 
     MutableColumnPtr cloneResized(size_t size) const override;
 
-    void clear() override
-    {
-        data.clear();
-    }
-
     Field operator[](size_t n) const override
     {
         return data[n];
@@ -259,11 +254,6 @@ public:
     MutableColumns scatter(IColumn::ColumnIndex num_columns, const IColumn::Selector & selector) const override
     {
         return this->template scatterImpl<Self>(num_columns, selector);
-    }
-
-    void scatter(IColumn::ColumnIndex num_columns, const IColumn::Selector & selector, Columns & res_columns) const override
-    {
-        this->template scatterImplInplace<Self>(num_columns, selector, res_columns);
     }
 
     void gather(ColumnGathererStream & gatherer_stream) override;
