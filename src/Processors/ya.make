@@ -106,8 +106,10 @@ SRCS(
     Sources/SourceFromInputStream.cpp
     Sources/SourceWithProgress.cpp
     Transforms/AddingMissedTransform.cpp
+    Transforms/AddingSelectorTransform.cpp
     Transforms/AggregatingTransform.cpp
     Transforms/ConvertingTransform.cpp
+    Transforms/CopyTransform.cpp
     Transforms/CreatingSetsTransform.cpp
     Transforms/CubeTransform.cpp
     Transforms/DistinctTransform.cpp
@@ -128,7 +130,6 @@ SRCS(
     Transforms/RollupTransform.cpp
     Transforms/SortingTransform.cpp
     Transforms/TotalsHavingTransform.cpp
-    Transforms/SplittingByHashTransform.cpp
 )
 
 END()

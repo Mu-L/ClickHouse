@@ -41,24 +41,25 @@ namespace std
 #include <DataStreams/CollapsingFinalBlockInputStream.h>
 #include <DataStreams/CreatingSetsBlockInputStream.h>
 #include <DataStreams/ReverseBlockInputStream.h>
-#include <DataTypes/DataTypesNumber.h>
 #include <DataTypes/DataTypeDate.h>
 #include <DataTypes/DataTypeEnum.h>
-#include <Storages/VirtualColumnUtils.h>
-#include <Processors/Transforms/FilterTransform.h>
-#include <Processors/Transforms/AddingConstColumnTransform.h>
-#include <Processors/Transforms/ExpressionTransform.h>
-#include <Processors/Transforms/ReverseTransform.h>
-#include <Processors/Merges/MergingSortedTransform.h>
-#include <Processors/Merges/SummingSortedTransform.h>
-#include <Processors/Merges/AggregatingSortedTransform.h>
-#include <Processors/Merges/ReplacingSortedTransform.h>
-#include <Processors/Merges/VersionedCollapsingTransform.h>
-#include <Processors/Executors/TreeExecutorBlockInputStream.h>
-#include <Processors/Sources/SourceFromInputStream.h>
+#include <DataTypes/DataTypesNumber.h>
 #include <Processors/ConcatProcessor.h>
+#include <Processors/Executors/TreeExecutorBlockInputStream.h>
+#include <Processors/Merges/AggregatingSortedTransform.h>
 #include <Processors/Merges/CollapsingSortedTransform.h>
-#include <Processors/Transforms/SplittingByHashTransform.h>
+#include <Processors/Merges/MergingSortedTransform.h>
+#include <Processors/Merges/ReplacingSortedTransform.h>
+#include <Processors/Merges/SummingSortedTransform.h>
+#include <Processors/Merges/VersionedCollapsingTransform.h>
+#include <Processors/Sources/SourceFromInputStream.h>
+#include <Processors/Transforms/AddingConstColumnTransform.h>
+#include <Processors/Transforms/AddingSelectorTransform.h>
+#include <Processors/Transforms/CopyTransform.h>
+#include <Processors/Transforms/ExpressionTransform.h>
+#include <Processors/Transforms/FilterTransform.h>
+#include <Processors/Transforms/ReverseTransform.h>
+#include <Storages/VirtualColumnUtils.h>
 
 namespace ProfileEvents
 {
@@ -1078,7 +1079,7 @@ Pipes MergeTreeDataSelectExecutor::spreadMarkRangesAmongStreamsFinal(
     for (size_t i = 0; i < sort_columns_size; ++i)
         sort_description.emplace_back(header.getPositionByName(sort_columns[i]), 1, 1);
 
-    auto get_merging_processor = [&]() -> ProcessorPtr
+    auto get_merging_processor = [&]() -> MergingTransformPtr
     {
         switch (data.merging_params.mode)
         {
@@ -1136,18 +1137,18 @@ Pipes MergeTreeDataSelectExecutor::spreadMarkRangesAmongStreamsFinal(
             key_columns.emplace_back(desc.column_number);
     }
 
-    Processors splitters;
-    Processors resizes;
-    splitters.reserve(pipes.size());
+    Processors selectors;
+    Processors copiers;
+    selectors.reserve(pipes.size());
 
     for (auto & pipe : pipes)
     {
-        auto splitter = std::make_shared<SplittingByHashTransform>(pipe.getHeader(), num_streams, key_columns);
-        auto resize = std::make_shared<ResizeByHashTransform>(pipe.getHeader(), num_streams);
-        connect(pipe.getPort(), splitter->getInputPort());
-        connect(splitter->getOutputPort(), resize->getInputPort());
-        splitters.emplace_back(std::move(splitter));
-        resizes.emplace_back(std::move(resize));
+        auto selector = std::make_shared<AddingSelectorTransform>(pipe.getHeader(), num_streams, key_columns);
+        auto copier = std::make_shared<CopyTransform>(pipe.getHeader(), num_streams);
+        connect(pipe.getPort(), selector->getInputPort());
+        connect(selector->getOutputPort(), copier->getInputPort());
+        selectors.emplace_back(std::move(selector));
+        copiers.emplace_back(std::move(copier));
     }
 
     Processors merges;
@@ -1158,12 +1159,13 @@ Pipes MergeTreeDataSelectExecutor::spreadMarkRangesAmongStreamsFinal(
     for (size_t i = 0; i < num_streams; ++i)
     {
         auto merge = get_merging_processor();
+        merge->setSelectorPosition(i);
         input_ports.emplace_back(merge->getInputs().begin());
         merges.emplace_back(std::move(merge));
     }
 
     /// Connect outputs of i-th splitter with i-th input port of every merge.
-    for (auto & resize : resizes)
+    for (auto & resize : copiers)
     {
         size_t input_num = 0;
         for (auto & output : resize->getOutputs())
@@ -1187,8 +1189,8 @@ Pipes MergeTreeDataSelectExecutor::spreadMarkRangesAmongStreamsFinal(
         pipes.emplace_back(&merge->getOutputs().front());
 
     pipes.front().addProcessors(processors);
-    pipes.front().addProcessors(splitters);
-    pipes.front().addProcessors(resizes);
+    pipes.front().addProcessors(selectors);
+    pipes.front().addProcessors(copiers);
     pipes.front().addProcessors(merges);
 
     return pipes;

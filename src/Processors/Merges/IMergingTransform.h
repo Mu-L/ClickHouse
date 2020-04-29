@@ -18,6 +18,10 @@ public:
         const Block & output_header,
         bool have_all_inputs_);
 
+    virtual ~IMergingTransformBase() = default;
+
+    OutputPort & getOutputPort() { return outputs.front(); }
+
     /// Methods to add additional input port. It is possible to do only before the first call of `prepare`.
     void addInput();
     /// Need to be called after all inputs are added. (only if have_all_inputs was not specified).
@@ -25,9 +29,16 @@ public:
 
     Status prepare() override;
 
+    /// Set position which will be used in selector if input chunk has attached SelectorInfo (see SelectorInfo.h).
+    /// Columns will be filtered, keep only rows labeled with this position.
+    /// It is used in parallel final.
+    size_t setSelectorPosition(size_t position) { state.selector_position = position; }
+
 protected:
     virtual void onNewInput(); /// Is called when new input is added. Only if have_all_inputs = false.
     virtual void onFinish() {} /// Is called when all data is processed.
+
+    bool filterChunks(); /// Filter chunks if selector position was set. For parallel final.
 
     /// Processor state.
     struct State
@@ -40,6 +51,7 @@ protected:
         size_t next_input_to_read = 0;
 
         Chunks init_chunks;
+        ssize_t selector_position = -1;
     };
 
     State state;
@@ -51,6 +63,7 @@ private:
 
         InputPort & port;
         bool is_initialized = false;
+        bool is_filtered = false;
     };
 
     std::vector<InputState> input_states;
@@ -79,6 +92,9 @@ public:
 
     void work() override
     {
+        if (!filterChunks())
+            return;
+
         if (!state.init_chunks.empty())
             algorithm.initialize(std::move(state.init_chunks));
 
@@ -121,5 +137,7 @@ protected:
 private:
     using IMergingTransformBase::state;
 };
+
+using MergingTransformPtr = std::shared_ptr<IMergingTransformBase>;
 
 }
