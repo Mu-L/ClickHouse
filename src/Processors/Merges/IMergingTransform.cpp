@@ -177,6 +177,9 @@ IProcessor::Status IMergingTransformBase::prepare()
 
 static void filterChunk(Chunk & chunk, size_t selector_position)
 {
+    if (!chunk.getChunkInfo())
+        throw Exception("IMergingTransformBase expected ChunkInfo for input chunk", ErrorCodes::LOGICAL_ERROR);
+
     const auto * chunk_info = typeid_cast<const SelectorInfo *>(chunk.getChunkInfo().get());
     if (!chunk_info)
         throw Exception("IMergingTransformBase expected SelectorInfo for input chunk", ErrorCodes::LOGICAL_ERROR);
