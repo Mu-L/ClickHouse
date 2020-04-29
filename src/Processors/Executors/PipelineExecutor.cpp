@@ -168,9 +168,9 @@ void PipelineExecutor::addJob(ExecutionState * execution_state)
     {
         try
         {
-            Stopwatch watch;
+            // Stopwatch watch;
             executeJob(execution_state->processor);
-            execution_state->execution_time_ns += watch.elapsed();
+            // execution_state->execution_time_ns += watch.elapsed();
 
             ++execution_state->num_executed_jobs;
         }
@@ -280,9 +280,9 @@ bool PipelineExecutor::prepareProcessor(UInt64 pid, size_t thread_number, Queue 
     std::vector<Edge *> updated_direct_edges;
 
     {
-//#ifndef NDEBUG
+#ifndef NDEBUG
         Stopwatch watch;
-//#endif
+#endif
 
         std::unique_lock<std::mutex> lock(std::move(node_lock));
 
@@ -296,9 +296,9 @@ bool PipelineExecutor::prepareProcessor(UInt64 pid, size_t thread_number, Queue 
             return false;
         }
 
-//#ifndef NDEBUG
+#ifndef NDEBUG
         node.execution_state->preparation_time_ns += watch.elapsed();
-//#endif
+#endif
 
         node.updated_input_ports.clear();
         node.updated_output_ports.clear();
@@ -504,20 +504,18 @@ void PipelineExecutor::execute(size_t num_threads)
 
     if (!all_processors_finished)
         throw Exception("Pipeline stuck. Current state:\n" + dumpPipeline(), ErrorCodes::LOGICAL_ERROR);
-
-std::cerr << dumpPipeline() << std::endl;
 }
 
 void PipelineExecutor::executeSingleThread(size_t thread_num, size_t num_threads)
 {
-//#ifndef NDEBUG
+#ifndef NDEBUG
     UInt64 total_time_ns = 0;
     UInt64 execution_time_ns = 0;
     UInt64 processing_time_ns = 0;
     UInt64 wait_time_ns = 0;
 
     Stopwatch total_time_watch;
-//#endif
+#endif
 
     ExecutionState * state = nullptr;
 
@@ -596,15 +594,15 @@ void PipelineExecutor::executeSingleThread(size_t thread_num, size_t num_threads
             addJob(state);
 
             {
-//#ifndef NDEBUG
+#ifndef NDEBUG
                 Stopwatch execution_time_watch;
-//#endif
+#endif
 
                 state->job();
 
-//#ifndef NDEBUG
+#ifndef NDEBUG
                 execution_time_ns += execution_time_watch.elapsed();
-//#endif
+#endif
             }
 
             if (state->exception)
@@ -613,9 +611,9 @@ void PipelineExecutor::executeSingleThread(size_t thread_num, size_t num_threads
             if (finished)
                 break;
 
-//#ifndef NDEBUG
+#ifndef NDEBUG
             Stopwatch processing_time_watch;
-//#endif
+#endif
 
             /// Try to execute neighbour processor.
             {
@@ -667,13 +665,13 @@ void PipelineExecutor::executeSingleThread(size_t thread_num, size_t num_threads
                     doExpandPipeline(task, false);
             }
 
-//#ifndef NDEBUG
+#ifndef NDEBUG
             processing_time_ns += processing_time_watch.elapsed();
-//#endif
+#endif
         }
     }
 
-//#ifndef NDEBUG
+#ifndef NDEBUG
     total_time_ns = total_time_watch.elapsed();
     wait_time_ns = total_time_ns - execution_time_ns - processing_time_ns;
 
@@ -683,7 +681,7 @@ void PipelineExecutor::executeSingleThread(size_t thread_num, size_t num_threads
         << " Execution time: " << (execution_time_ns / 1e9) << " sec."
         << " Processing time: " << (processing_time_ns / 1e9) << " sec."
         << " Wait time: " << (wait_time_ns / 1e9) << " sec.");
-//#endif
+#endif
 }
 
 void PipelineExecutor::executeImpl(size_t num_threads)
@@ -782,15 +780,6 @@ void PipelineExecutor::executeImpl(size_t num_threads)
 
 String PipelineExecutor::dumpPipeline() const
 {
-
-    struct Stats
-    {
-        size_t exec_time_ns = 0;
-        size_t count = 0;
-    };
-
-    std::map<std::string, Stats> m;
-
     for (auto & node : graph)
     {
         if (node.execution_state)
@@ -798,22 +787,15 @@ String PipelineExecutor::dumpPipeline() const
             WriteBufferFromOwnString buffer;
             buffer << "(" << node.execution_state->num_executed_jobs << " jobs";
 
-//#ifndef NDEBUG
+#ifndef NDEBUG
             buffer << ", execution time: " << node.execution_state->execution_time_ns / 1e9 << " sec.";
             buffer << ", preparation time: " << node.execution_state->preparation_time_ns / 1e9 << " sec.";
-//#endif
+#endif
 
             buffer << ")";
             node.processor->setDescription(buffer.str());
-
-            auto & s = m[node.processor->getName()];
-            s.count ++;
-            s.exec_time_ns += node.execution_state->execution_time_ns;
         }
     }
-
-    for (auto & [name, s] : m)
-        std::cerr << name << " : " << s.count << " nodes " << (s.exec_time_ns / 1e9) << " sec. total" << std::endl;
 
     std::vector<IProcessor::Status> statuses;
     std::vector<IProcessor *> proc_list;
