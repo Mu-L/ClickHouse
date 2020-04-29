@@ -11,7 +11,7 @@ namespace ErrorCodes
 
 AddingSelectorTransform::AddingSelectorTransform(
     const Block & header, size_t num_outputs_, ColumnNumbers key_columns_)
-    : ISimpleTransform(header, {}, false)
+    : ISimpleTransform(header, header, false)
     , num_outputs(num_outputs_)
     , key_columns(std::move(key_columns_))
     , hash(0)

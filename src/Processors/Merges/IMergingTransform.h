@@ -32,7 +32,7 @@ public:
     /// Set position which will be used in selector if input chunk has attached SelectorInfo (see SelectorInfo.h).
     /// Columns will be filtered, keep only rows labeled with this position.
     /// It is used in parallel final.
-    size_t setSelectorPosition(size_t position) { state.selector_position = position; }
+    void setSelectorPosition(size_t position) { state.selector_position = position; }
 
 protected:
     virtual void onNewInput(); /// Is called when new input is added. Only if have_all_inputs = false.

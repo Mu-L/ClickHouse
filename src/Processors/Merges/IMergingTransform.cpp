@@ -1,6 +1,5 @@
 #include <Processors/Merges/IMergingTransform.h>
 #include <Processors/Transforms/SelectorInfo.h>
-#include <Common/PODArray.h>
 
 namespace DB
 {
