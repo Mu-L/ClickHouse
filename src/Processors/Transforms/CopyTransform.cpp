@@ -63,7 +63,7 @@ IProcessor::Status CopyTransform::prepareConsume()
     if (!input.hasData())
         return Status::NeedData;
 
-    input.pull(chunk);
+    chunk = input.pull();
     has_data = true;
     was_output_processed.assign(outputs.size(), false);
 
