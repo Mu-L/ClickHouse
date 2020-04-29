@@ -56,9 +56,6 @@ public:
     /// Creates empty column with the same type.
     virtual MutablePtr cloneEmpty() const { return cloneResized(0); }
 
-    /// Clear column inplace.
-    virtual void clear() { throw Exception("Cannot clear() column " + getName(), ErrorCodes::NOT_IMPLEMENTED); }
-
     /// Creates column with the same type and specified size.
     /// If size is less current size, then data is cut.
     /// If size is greater, than default values are appended.
