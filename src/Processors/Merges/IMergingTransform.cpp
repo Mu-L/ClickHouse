@@ -136,7 +136,6 @@ IProcessor::Status IMergingTransformBase::prepare()
 
     if (state.is_finished)
     {
-
         if (is_port_full)
             return Status::PortFull;
 
@@ -159,7 +158,7 @@ IProcessor::Status IMergingTransformBase::prepare()
             if (!input.hasData())
                 return Status::NeedData;
 
-            input.pull(state.input_chunk);
+            state.input_chunk = input.pull();
             if (!state.input_chunk.hasRows() && !input.isFinished())
                 return Status::NeedData;
 
@@ -244,6 +243,7 @@ bool IMergingTransformBase::filterChunks()
         if (!state.input_chunk.hasRows())
         {
             state.has_input = false;
+            state.need_data = true;
             has_empty_chunk = true;
         }
     }
