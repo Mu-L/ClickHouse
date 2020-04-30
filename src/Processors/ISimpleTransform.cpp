@@ -78,7 +78,7 @@ void ISimpleTransform::work()
     if (input_data.exception)
     {
         /// Skip transform in case of exception.
-        input_data = std::move(output_data);
+        output_data = std::move(input_data);
         has_input = false;
         has_output = true;
         return;
